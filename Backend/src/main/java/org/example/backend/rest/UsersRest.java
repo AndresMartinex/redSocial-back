@@ -20,6 +20,8 @@ public class UsersRest {
 
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder passwordEncoder;
 
     @Autowired
     private SecurityService securityService;
@@ -36,16 +38,20 @@ public class UsersRest {
         String password = body.get("password");
 
         try {
-            securityService.autoLogin(email, password);
             User user = usersService.getUserByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Credenciales incorrectas"));
+            }
 
             return ResponseEntity.ok(Map.of(
                     "message", "Login exitoso",
                     "id",      user.getId(),
-                    "email", user.getEmail(),
-                    "name", user.getName(),
-                    "role", user.getRole()
+                    "email",   user.getEmail(),
+                    "name",    user.getName(),
+                    "role",    user.getRole()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
